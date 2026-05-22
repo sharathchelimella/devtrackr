@@ -1,14 +1,15 @@
 /**
- * controllers/aiController.js – AI Analysis Controller
+ * controllers/aiController.js – AI Developer Insights Controller
+ * Handles AI analysis, sprint summaries, and report persistence.
  */
 
-const asyncHandler = require('../utils/asyncHandler');
-const GithubData = require('../models/GithubData');
-const Report = require('../models/Report');
-const aiService = require('../services/aiService');
-const { getOrSet } = require('../utils/cache');
+const asyncHandler     = require('../utils/asyncHandler');
+const GithubData       = require('../models/GithubData');
+const Report           = require('../models/Report');
+const aiService        = require('../services/aiService');
+const { getOrSet }     = require('../utils/cache');
 
-// ── @desc    Generate AI productivity analysis
+// ── @desc    Generate full AI developer insights
 // ── @route   POST /api/ai/analyze
 // ── @access  Private
 const analyzeProductivity = asyncHandler(async (req, res) => {
@@ -26,56 +27,52 @@ const analyzeProductivity = asyncHandler(async (req, res) => {
 
   // Fetch stored GitHub data
   const githubData = await GithubData.findOne({ user: req.user._id });
-  if (!githubData || !githubData.commits?.length) {
+  if (!githubData) {
     res.status(400);
-    throw new Error('No GitHub data found. Please sync your GitHub account first.');
+    throw new Error('No GitHub data found. Please connect and sync your GitHub account first.');
   }
 
-  const cacheKey = `ai:${req.user._id}:${reportType}`;
+  const cacheKey = `ai_v2:${req.user._id}:${reportType}`;
 
   const analysis = await getOrSet(
     cacheKey,
     async () => {
-      const result = await aiService.analyzeProductivity({
-        commits: githubData.commits,
-        pullRequests: githubData.pullRequests,
-        issues: githubData.issues,
-        username: req.user.github?.username,
-        dateRange: 'Last 30 days',
+      return aiService.analyzeProductivity({
+        commits:      githubData.commits      || [],
+        pullRequests: githubData.pullRequests || [],
+        issues:       githubData.issues       || [],
+        repositories: githubData.repositories || [],
+        username:     req.user.github?.username || req.user.name,
+        dateRange:    'Last 30 days',
       });
-      return result;
     },
-    1800 // Cache AI results for 30 minutes to save API costs
+    1800 // Cache for 30 minutes
   );
 
   // Persist report to DB
   const report = await Report.create({
-    user: req.user._id,
+    user:          req.user._id,
     reportType,
-    summary: analysis.summary,
+    summary:       analysis.summary,
     productivityScore: analysis.productivityScore,
-    recommendations: analysis.recommendations || [],
-    bottlenecks: analysis.bottlenecks || [],
+    recommendations:   analysis.recommendations || [],
+    bottlenecks:       analysis.bottlenecks     || [],
     inactiveContributors: analysis.inactiveAreas || [],
-    commitCount: githubData.commits.length,
-    prCount: githubData.pullRequests.length,
-    issueCount: githubData.issues.length,
-    aiModel: analysis.aiModel,
-    tokensUsed: analysis.tokensUsed,
+    commitCount:  githubData.commits?.length      || 0,
+    prCount:      githubData.pullRequests?.length  || 0,
+    issueCount:   githubData.issues?.length        || 0,
+    aiModel:      analysis.aiModel,
+    tokensUsed:   analysis.tokensUsed,
     dateRange: {
       from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-      to: new Date(),
+      to:   new Date(),
     },
   });
 
-  res.status(200).json({
-    success: true,
-    analysis,
-    reportId: report._id,
-  });
+  res.status(200).json({ success: true, analysis, reportId: report._id });
 });
 
-// ── @desc    Get sprint summary (lighter AI call)
+// ── @desc    Sprint summary (fast, lightweight call)
 // ── @route   GET /api/ai/sprint-summary
 // ── @access  Private
 const getSprintSummary = asyncHandler(async (req, res) => {
@@ -83,25 +80,30 @@ const getSprintSummary = asyncHandler(async (req, res) => {
     return res.status(200).json({
       success: true,
       demo: true,
-      summary: '• Completed 12 feature commits this sprint\n• Fixed 3 critical bugs\n• Reviewed 5 pull requests\n• Updated documentation for 2 modules',
+      summary:
+        '• Completed 12 feature commits across 3 repositories this sprint\n' +
+        '• Fixed 3 critical bugs in the authentication module\n' +
+        '• Reviewed and merged 5 pull requests from teammates\n' +
+        '• Updated API documentation and added 18 unit tests\n' +
+        '• Resolved 4 open issues ahead of the sprint deadline',
     });
   }
 
   const githubData = await GithubData.findOne({ user: req.user._id });
   if (!githubData?.commits?.length) {
     res.status(400);
-    throw new Error('No GitHub commit data found.');
+    throw new Error('No GitHub commit data found. Sync your GitHub account first.');
   }
 
   const summary = await aiService.generateSprintSummary(
     githubData.commits,
-    req.user.github?.username
+    req.user.github?.username || req.user.name
   );
 
   res.status(200).json({ success: true, summary });
 });
 
-// ── @desc    Get past AI reports
+// ── @desc    Get paginated past AI reports
 // ── @route   GET /api/ai/reports
 // ── @access  Private
 const getReports = asyncHandler(async (req, res) => {
@@ -118,64 +120,138 @@ const getReports = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     reports,
-    pagination: {
-      page: Number(page),
-      limit: Number(limit),
-      total,
-      pages: Math.ceil(total / limit),
-    },
+    pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / limit) },
   });
 });
 
-// ── @desc    Get a single report
+// ── @desc    Get single report
 // ── @route   GET /api/ai/reports/:id
 // ── @access  Private
 const getReport = asyncHandler(async (req, res) => {
-  const report = await Report.findOne({
-    _id: req.params.id,
-    user: req.user._id, // Ensure user can only access their own reports
-  });
-
-  if (!report) {
-    res.status(404);
-    throw new Error('Report not found');
-  }
-
+  const report = await Report.findOne({ _id: req.params.id, user: req.user._id });
+  if (!report) { res.status(404); throw new Error('Report not found'); }
   res.status(200).json({ success: true, report });
 });
 
-// ── Demo analysis for when no Gemini API key is configured ─────────────────
+// ── Rich demo payload (returned when no Gemini key is set) ───────────────────
 const getDemoAnalysis = (name) => ({
-  summary: `${name} has shown consistent productivity over the past 30 days with strong commit frequency and active PR engagement. Code quality indicators are positive with regular merges and issue resolution.`,
   productivityScore: 78,
+  summary: `${name} has maintained strong development momentum over the past 30 days with consistent daily commits, healthy PR engagement, and active issue resolution. Code quality indicators are positive and productivity is trending upward.`,
+  weeklyTrend: 'improving',
   highlights: [
-    'Maintained daily commit streak for 3 weeks',
-    'Successfully merged 8 pull requests',
-    'Resolved 5 critical issues ahead of schedule',
+    'Maintained a 12-day commit streak – top 15% of developers',
+    'Successfully merged 8 pull requests with fast review cycles',
+    'Resolved 5 critical bugs ahead of sprint deadline',
   ],
+
+  commitInsights: {
+    verdict: 'Commit frequency is healthy with meaningful messages indicating feature-driven development.',
+    patterns: 'Most productive on Tuesday–Thursday afternoons. Consistent weekday commits with occasional weekend pushes.',
+    messageQuality: 'good',
+    suggestions: [
+      'Use conventional commits format (feat:, fix:, docs:) for better changelog generation',
+      'Break large commits into atomic, single-responsibility changes',
+    ],
+  },
+
+  repositoryInsights: {
+    verdict: 'Active across 5 repositories with strong focus on 2 primary projects.',
+    mostActiveRepo: 'main-project',
+    languageDiversity: 'medium',
+    suggestions: [
+      'Add README badges (build status, coverage) to improve repo visibility',
+      'Consider archiving repos with no commits in 90+ days',
+    ],
+  },
+
+  codingActivityInsights: {
+    verdict: 'Coding activity is consistent with healthy work-life balance signals.',
+    peakProductivityTime: 'Afternoons (2–5 PM) on weekdays',
+    consistencyScore: 72,
+    burnoutRisk: 'low',
+    suggestions: [
+      'Schedule deep-work coding blocks during your peak afternoon hours',
+      'Consider using GitHub Actions to automate repetitive tasks',
+    ],
+  },
+
+  productivityPatterns: {
+    verdict: 'Shows a consistent weekday coding pattern with strong PR merge rate.',
+    workStyle: 'consistent',
+    prHealthScore: 82,
+    issueResolutionRate: 65,
+    suggestions: [
+      'Improve issue resolution rate by triaging open issues weekly',
+      'Reduce PR review cycle time by adding PR templates',
+    ],
+  },
+
   recommendations: [
     {
       type: 'improvement',
       title: 'Increase code review participation',
-      description: 'Reviewing peers\' code more frequently can improve team velocity by 20%.',
+      description: 'Reviewing teammates\' PRs more frequently improves team velocity by ~20% and accelerates your own code quality skills.',
       priority: 'medium',
+      category: 'patterns',
     },
     {
       type: 'bottleneck',
-      title: 'Stale PRs need attention',
-      description: '3 pull requests have been open for more than 7 days without updates.',
+      title: 'Address stale open PRs',
+      description: '3 pull requests have been open for 7+ days without activity. Stale PRs cause merge conflicts and slow team progress.',
       priority: 'high',
+      category: 'repositories',
     },
     {
       type: 'task',
-      title: 'Address open issues backlog',
-      description: 'There are 12 open issues. Consider scheduling a dedicated bug-fix sprint.',
+      title: 'Adopt conventional commit messages',
+      description: 'Structured commit messages (feat:, fix:, docs:) enable automatic changelog generation and improve project history readability.',
+      priority: 'low',
+      category: 'commits',
+    },
+    {
+      type: 'improvement',
+      title: 'Schedule weekly issue triage',
+      description: 'Your open issue backlog is growing. A 30-minute weekly triage prevents accumulation and maintains project health.',
       priority: 'medium',
+      category: 'activity',
     },
   ],
-  bottlenecks: ['Long PR review cycles', 'Issue backlog growing week over week'],
-  inactiveAreas: ['Documentation updates', 'Test coverage improvements'],
-  weeklyTrend: 'improving',
+
+  bottlenecks: [
+    'Long PR review cycles averaging 4+ days',
+    'Issue backlog growing 15% week over week',
+    'Limited automated test coverage in 2 active repos',
+  ],
+
+  strengths: [
+    'Consistent daily commit cadence with 12-day streak',
+    'Fast PR merge rate – 80% merged within 48 hours',
+    'Broad language diversity across repositories',
+  ],
+
+  commitPatterns: {
+    byDay:    { Mon: 8, Tue: 15, Wed: 12, Thu: 14, Fri: 10, Sat: 4, Sun: 2 },
+    byHour:   { morning: 12, afternoon: 28, evening: 18, night: 7 },
+    peakDay:  'Tue',
+    peakTime: 'afternoon',
+  },
+
+  repoStats: [
+    { name: 'main-project',  language: 'JavaScript', stars: 12, commits: 28, openIssues: 5  },
+    { name: 'api-service',   language: 'TypeScript',  stars: 4,  commits: 15, openIssues: 2  },
+    { name: 'mobile-app',    language: 'React Native',stars: 7,  commits: 8,  openIssues: 8  },
+    { name: 'utils-lib',     language: 'JavaScript', stars: 3,  commits: 4,  openIssues: 0  },
+    { name: 'docs-site',     language: 'Markdown',   stars: 1,  commits: 2,  openIssues: 1  },
+  ],
+
+  activityMetrics: {
+    currentStreak: 12,
+    longestStreak: 21,
+    activeDays:    22,
+    avgPerDay:     2.2,
+    totalCommits:  65,
+  },
+
   aiModel: 'gemini-demo',
   generatedAt: new Date().toISOString(),
 });

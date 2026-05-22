@@ -14,6 +14,18 @@
 </p>
 
 <p>
+  <a href="https://devtrackr-three.vercel.app/">
+    <img src="https://img.shields.io/badge/Frontend-Vercel-black?style=flat-square&logo=vercel" />
+  </a>
+  <a href="https://devtrackr-ou9a.onrender.com">
+    <img src="https://img.shields.io/badge/Backend-Render-46E3B7?style=flat-square&logo=render" />
+  </a>
+  <a href="https://github.com/sharathchelimella/devtrackr">
+    <img src="https://img.shields.io/badge/Source-GitHub-181717?style=flat-square&logo=github" />
+  </a>
+</p>
+
+<p>
   DevTrackr connects your GitHub account and delivers AI-powered productivity insights, sprint summaries, and coding analytics — all in a beautiful, dark-mode-ready dashboard.
 </p>
 
@@ -24,7 +36,8 @@
 ## 📋 Table of Contents
 
 - [Overview](#-overview)
-- [Live Demo](#-live-demo)
+- [Deployment](#-deployment)
+- [Demo Video](#-demo-video)
 - [Screenshots](#-screenshots)
 - [Features](#-features)
 - [Architecture](#-architecture)
@@ -56,15 +69,21 @@ Connect your GitHub account via a Personal Access Token (PAT), and DevTrackr wil
 
 ---
 
-## 🎬 Live Demo
+## 🌐 Deployment
 
-> **Demo video** – _Record a Loom/YouTube walkthrough and paste the embed link here._
+| Service | Platform | URL |
+|---|---|---|
+| 🖥️ Frontend | Vercel | [devtrackr-three.vercel.app](https://devtrackr-three.vercel.app/) |
+| ⚙️ Backend API | Render | [devtrackr-ou9a.onrender.com](https://devtrackr-ou9a.onrender.com) |
+| 📦 Source Code | GitHub | [sharathchelimella/devtrackr](https://github.com/sharathchelimella/devtrackr) |
 
-```
-📺 https://your-demo-link.com
-```
+> **Note:** The Render backend is on a free tier and may take 30–60 seconds to wake up on first request after a period of inactivity.
 
-To embed a YouTube video in your README:
+---
+
+## 🎬 Demo Video
+
+> _Record a Loom/YouTube walkthrough and paste the embed link below._
 
 [![DevTrackr Demo](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
 
@@ -581,6 +600,10 @@ OPENAI_API_KEY=sk-your_openai_key_here   # optional
 CLIENT_URL=http://localhost:5173
 ```
 
+> **Production values (already configured on Render):**
+> - `CLIENT_URL` → `https://devtrackr-three.vercel.app`
+> - `MONGO_URI` → your MongoDB Atlas connection string
+
 ### 4. Start the Application
 
 Open **two terminal windows**:
@@ -621,7 +644,11 @@ npm run dev
 ### Client (`client/.env`) — optional
 
 ```env
+# Local development
 VITE_API_URL=http://localhost:5000
+
+# Production (already set on Vercel)
+VITE_API_URL=https://devtrackr-ou9a.onrender.com
 ```
 
 ---
@@ -743,6 +770,8 @@ This project follows [Conventional Commits](https://www.conventionalcommits.org/
 
 ## 📈 Roadmap
 
+- [x] Deployed frontend on Vercel
+- [x] Deployed backend API on Render
 - [ ] GitHub OAuth login (replace PAT flow)
 - [ ] Team/organization dashboards
 - [ ] Email notifications for stale PRs
@@ -750,7 +779,7 @@ This project follows [Conventional Commits](https://www.conventionalcommits.org/
 - [ ] Docker + docker-compose setup
 - [ ] CI/CD with GitHub Actions
 - [ ] Unit and integration test coverage
-- [ ] Deployment guide (Vercel + Railway/Render)
+- [x] Deployment guide (Vercel + Render)
 
 ---
 

@@ -5,7 +5,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, GitCommit, GitPullRequest, CircleDot,
-  BookOpen, Cpu, Settings, LogOut, Zap, ChevronRight,
+  BookOpen, Cpu, Settings, LogOut, Zap, ChevronRight, Kanban
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -16,6 +16,7 @@ const navItems = [
   { path: '/commits',       icon: GitCommit,        label: 'Commits',       badge: null },
   { path: '/pull-requests', icon: GitPullRequest,   label: 'Pull Requests', badge: null },
   { path: '/issues',        icon: CircleDot,        label: 'Issues',        badge: null },
+  { path: '/collaboration',  icon: Kanban,           label: 'Team Board',    badge: null },
   { path: '/ai-insights',   icon: Cpu,              label: 'AI Insights',   badge: 'AI' },
 ];
 

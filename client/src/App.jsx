@@ -28,6 +28,7 @@ import PullRequests from './pages/PullRequests';
 import Issues from './pages/Issues';
 import AIInsights from './pages/AIInsights';
 import Settings from './pages/Settings';
+import Collaboration from './pages/Collaboration';
 
 function App() {
   return (
@@ -59,6 +60,7 @@ function App() {
                 <Route path="pull-requests" element={<PullRequests />} />
                 <Route path="issues"        element={<Issues />} />
                 <Route path="ai-insights"   element={<AIInsights />} />
+                <Route path="collaboration" element={<Collaboration />} />
                 <Route path="settings"      element={<Settings />} />
               </Route>
 

@@ -22,6 +22,8 @@ const githubRoutes = require('./routes/github');
 const aiRoutes = require('./routes/ai');
 const dashboardRoutes = require('./routes/dashboard');
 const notificationRoutes = require('./routes/notification');
+const teamRoutes = require('./routes/team');
+const taskRoutes = require('./routes/task');
 
 // ── Connect Database ─────────────────────────────────────────────────────────
 connectDB();
@@ -62,6 +64,8 @@ app.use('/api/github', githubRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/teams', teamRoutes);
+app.use('/api/tasks', taskRoutes);
 
 // ── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((req, res) => {

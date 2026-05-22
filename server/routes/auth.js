@@ -14,6 +14,7 @@ const {
   getMe,
   updateProfile,
   changePassword,
+  searchUsers,
 } = require('../controllers/authController');
 
 const {
@@ -40,5 +41,6 @@ router.get('/github/sync-status', protect, getSyncStatus);
 router.get('/me',              protect, getMe);
 router.put('/profile',         protect, updateProfile);
 router.put('/change-password', protect, changePassword);
+router.get('/search',          protect, searchUsers);
 
 module.exports = router;

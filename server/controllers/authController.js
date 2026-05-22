@@ -141,4 +141,31 @@ const changePassword = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { register, login, getMe, updateProfile, changePassword };
+// ── @desc    Search users by name or email
+// ── @route   GET /api/auth/search
+// ── @access  Private
+const searchUsers = asyncHandler(async (req, res) => {
+  const { q } = req.query;
+
+  if (!q || q.trim() === '') {
+    return res.status(200).json({ success: true, users: [] });
+  }
+
+  const escapedQuery = q.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const regex = new RegExp(escapedQuery, 'i');
+
+  const users = await User.find({
+    _id: { $ne: req.user._id },
+    isActive: true,
+    $or: [{ name: regex }, { email: regex }],
+  })
+    .select('name email github.username github.avatarUrl')
+    .limit(10);
+
+  res.status(200).json({
+    success: true,
+    users,
+  });
+});
+
+module.exports = { register, login, getMe, updateProfile, changePassword, searchUsers };

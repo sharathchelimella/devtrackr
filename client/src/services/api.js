@@ -6,7 +6,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/',                  // Uses Vite's proxy in dev; absolute in prod
+  baseURL: import.meta.env.VITE_API_URL || '/',                  // Uses VITE_API_URL if set (production), otherwise fallback to relative (development with Vite proxy)
   timeout: 30000,                // 30 second timeout
   headers: {
     'Content-Type': 'application/json',

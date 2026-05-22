@@ -1,90 +1,99 @@
 /**
  * models/User.js – User Mongoose Model
- * Handles authentication data and GitHub token storage.
+ * Supports both email/password auth AND GitHub OAuth login.
  */
 
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const bcrypt   = require('bcryptjs');
 
 const UserSchema = new mongoose.Schema(
   {
     name: {
-      type: String,
-      required: [true, 'Please provide a name'],
-      trim: true,
+      type:      String,
+      required:  [true, 'Please provide a name'],
+      trim:      true,
       maxlength: [60, 'Name cannot exceed 60 characters'],
     },
     email: {
-      type: String,
-      required: [true, 'Please provide an email'],
-      unique: true,
+      type:      String,
+      required:  [true, 'Please provide an email'],
+      unique:    true,
       lowercase: true,
-      trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
+      trim:      true,
+      match:     [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
     },
     password: {
-      type: String,
-      required: [true, 'Please provide a password'],
+      type:      String,
       minlength: [8, 'Password must be at least 8 characters'],
-      select: false, // Never return password in queries by default
+      select:    false, // Never return password in queries
+      // NOT required – OAuth users have no password
     },
     role: {
-      type: String,
-      enum: ['developer', 'admin', 'viewer'],
+      type:    String,
+      enum:    ['developer', 'admin', 'viewer'],
       default: 'developer',
     },
-    // ── GitHub Integration ─────────────────────────────────────────────────
-    github: {
-      accessToken: {
-        type: String,
-        select: false, // Never expose token in API responses
-      },
-      username: String,
-      avatarUrl: String,
-      profileUrl: String,
-      connectedAt: Date,
-      isConnected: {
-        type: Boolean,
-        default: false,
-      },
+
+    // ── Auth method ────────────────────────────────────────────────────────
+    authProvider: {
+      type:    String,
+      enum:    ['local', 'github'],
+      default: 'local',
     },
+
+    // ── GitHub OAuth + Integration ─────────────────────────────────────────
+    github: {
+      // GitHub OAuth user ID (used to match returning OAuth users)
+      githubId: { type: String, index: true },
+
+      // OAuth access token (also used for GitHub REST API calls)
+      accessToken: { type: String, select: false },
+
+      username:   String,
+      avatarUrl:  String,
+      profileUrl: String,
+      bio:        String,
+      location:   String,
+      publicRepos: Number,
+      followers:   Number,
+
+      connectedAt: Date,
+      lastSyncAt:  Date,
+
+      isConnected: { type: Boolean, default: false },
+    },
+
     // ── Preferences ────────────────────────────────────────────────────────
     preferences: {
-      theme: {
-        type: String,
-        enum: ['light', 'dark', 'system'],
-        default: 'dark',
-      },
+      theme:       { type: String, enum: ['light', 'dark', 'system'], default: 'dark' },
       defaultRepo: String,
+      autoSync:    { type: Boolean, default: true },
     },
-    // ── Timestamps ─────────────────────────────────────────────────────────
+
     lastLoginAt: Date,
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
+    isActive:    { type: Boolean, default: true },
   },
-  {
-    timestamps: true, // Adds createdAt and updatedAt automatically
-  }
+  { timestamps: true }
 );
 
-// ── Pre-save Hook: Hash password before storing ───────────────────────────────
-UserSchema.pre('save', async function (next) {
-  // Only hash if password field was actually modified
-  if (!this.isModified('password')) return next();
+// ── Index for fast OAuth lookups ──────────────────────────────────────────────
+UserSchema.index({ 'github.githubId': 1 });
 
-  const salt = await bcrypt.genSalt(12); // Cost factor of 12 for security
+// ── Pre-save: hash password only for local auth users ────────────────────────
+UserSchema.pre('save', async function (next) {
+  if (!this.isModified('password') || !this.password) return next();
+  const salt   = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
 
-// ── Instance Method: Compare plaintext vs hashed password ────────────────────
+// ── Instance Method: compare plaintext vs hashed ─────────────────────────────
 UserSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+  if (!this.password) return false; // OAuth user has no password
+  return bcrypt.compare(enteredPassword, this.password);
 };
 
-// ── Sanitize output: remove sensitive fields from JSON ───────────────────────
+// ── Sanitize: strip sensitive fields from JSON output ────────────────────────
 UserSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;

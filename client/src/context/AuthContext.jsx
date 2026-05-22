@@ -123,12 +123,32 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: 'CLEAR_ERROR' });
   }, []);
 
+  /**
+   * Log in directly with a JWT token (used after GitHub OAuth callback).
+   */
+  const loginWithToken = useCallback(async (token) => {
+    dispatch({ type: 'AUTH_LOADING' });
+    try {
+      localStorage.setItem('devtrackr_token', token);
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      const { data } = await api.get('/api/auth/me');
+      dispatch({ type: 'AUTH_SUCCESS', payload: data.user });
+      return { success: true };
+    } catch (err) {
+      localStorage.removeItem('devtrackr_token');
+      delete api.defaults.headers.common['Authorization'];
+      dispatch({ type: 'LOGOUT' });
+      return { success: false };
+    }
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
         ...state,
         register,
         login,
+        loginWithToken,
         logout,
         updateUser,
         clearError,

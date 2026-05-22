@@ -19,6 +19,7 @@ import PrivateRoute from './components/PrivateRoute';
 // ── Pages ─────────────────────────────────────────────────────────────────────
 import Login from './pages/Login';
 import Register from './pages/Register';
+import OAuthCallback from './pages/OAuthCallback';
 import Dashboard from './pages/Dashboard';
 import Repositories from './pages/Repositories';
 import Commits from './pages/Commits';
@@ -33,9 +34,11 @@ function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* ── Public Routes ─────────────────────────────────────── */}
-            <Route path="/login"    element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            {/* ── Public Routes ───────────────────────────────────────── */}
+            <Route path="/login"          element={<Login />} />
+            <Route path="/register"       element={<Register />} />
+            {/* GitHub OAuth callback – must be public, receives token via query param */}
+            <Route path="/oauth/callback" element={<OAuthCallback />} />
 
             {/* ── Protected Routes (require authentication) ─────────── */}
             <Route

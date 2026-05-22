@@ -1,0 +1,218 @@
+/* ============================================================
+   index.css – DevTrackr Global Stylesheet
+   Base styles, CSS custom properties, and utility classes
+   ============================================================ */
+
+/* ── Google Fonts – must be first ───────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── CSS Custom Properties ───────────────────────────────────── */
+:root {
+  --color-bg-primary:    #0f172a;
+  --color-bg-secondary:  #1e293b;
+  --color-bg-card:       #1e293b;
+  --color-border:        rgba(255, 255, 255, 0.08);
+  --color-text-primary:  #f1f5f9;
+  --color-text-secondary:#94a3b8;
+  --color-accent:        #3b82f6;
+  --color-accent-glow:   rgba(59, 130, 246, 0.25);
+  --sidebar-width:       260px;
+  --topbar-height:       64px;
+  --border-radius:       12px;
+  --transition-fast:     150ms ease;
+  --transition-base:     250ms ease;
+}
+
+/* ── Base Reset ──────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── Scrollbar Styling ───────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track  { background: #0f172a; }
+::-webkit-scrollbar-thumb  { background: #334155; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+/* ── Typography ──────────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+code, pre {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ── Layout Components ───────────────────────────────────────── */
+@layer components {
+  /* Glassmorphism card – border uses plain CSS to avoid /opacity issues */
+  .glass-card {
+    @apply rounded-xl backdrop-blur-sm;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(145deg, rgba(30,41,59,0.8) 0%, rgba(15,23,42,0.9) 100%);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+    transition: box-shadow var(--transition-base), transform var(--transition-base);
+  }
+  .glass-card:hover {
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  /* Primary button */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-lg
+           bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm
+           transition-all duration-200 focus:outline-none
+           disabled:opacity-50 disabled:cursor-not-allowed;
+    box-shadow: 0 0 20px rgba(59,130,246,0.3);
+  }
+  .btn-primary:hover:not(:disabled) {
+    box-shadow: 0 0 28px rgba(59,130,246,0.5);
+    transform: translateY(-1px);
+  }
+  .btn-primary:focus {
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.5);
+  }
+
+  /* Secondary button */
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-lg
+           text-slate-300 hover:text-white
+           font-medium text-sm transition-all duration-200
+           focus:outline-none
+           disabled:opacity-50 disabled:cursor-not-allowed;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    border-color: rgba(255,255,255,0.3);
+  }
+
+  /* Form input */
+  .input-field {
+    @apply w-full px-4 py-3 rounded-lg text-white placeholder-slate-500
+           focus:outline-none transition-all duration-200 text-sm;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.10);
+  }
+  .input-field:focus {
+    border-color: rgba(59,130,246,0.6);
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+  .badge-blue   { @apply badge bg-blue-500 bg-opacity-20 text-blue-400; border: 1px solid rgba(59,130,246,0.3); }
+  .badge-green  { @apply badge bg-emerald-500 bg-opacity-20 text-emerald-400; border: 1px solid rgba(16,185,129,0.3); }
+  .badge-amber  { @apply badge bg-amber-500 bg-opacity-20 text-amber-400; border: 1px solid rgba(245,158,11,0.3); }
+  .badge-rose   { @apply badge bg-rose-500 bg-opacity-20 text-rose-400; border: 1px solid rgba(244,63,94,0.3); }
+  .badge-purple { @apply badge bg-violet-500 bg-opacity-20 text-violet-400; border: 1px solid rgba(139,92,246,0.3); }
+
+  /* Metric card */
+  .metric-card {
+    @apply glass-card p-5 flex flex-col gap-3;
+  }
+
+  /* Section header */
+  .section-title {
+    @apply text-lg font-bold text-white tracking-tight;
+  }
+  .section-subtitle {
+    @apply text-sm text-slate-400;
+  }
+
+  /* Sidebar link */
+  .nav-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+           text-slate-400 hover:text-white transition-all duration-200 cursor-pointer;
+  }
+  .nav-link:hover {
+    background: rgba(255,255,255,0.08);
+  }
+  .nav-link.active {
+    @apply text-white;
+    background: rgba(37,99,235,0.2);
+    border: 1px solid rgba(59,130,246,0.2);
+    box-shadow: inset 0 0 20px rgba(59,130,246,0.1);
+  }
+}
+
+/* ── Animation Utilities ─────────────────────────────────────── */
+@layer utilities {
+  .animate-fade-in      { animation: fadeIn 0.3s ease-in-out; }
+  .animate-slide-up     { animation: slideUp 0.4s ease-out; }
+  .animate-slide-left   { animation: slideInLeft 0.3s ease-out; }
+
+  .text-gradient {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glow-blue {
+    box-shadow: 0 0 20px rgba(59,130,246,0.3);
+  }
+
+  .border-glow {
+    border-color: rgba(59,130,246,0.3);
+    box-shadow: 0 0 10px rgba(59,130,246,0.1);
+  }
+}
+
+@keyframes fadeIn      { from { opacity: 0; }              to { opacity: 1; } }
+@keyframes slideUp     { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes slideInLeft { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* ── Loading skeleton ────────────────────────────────────────── */
+.skeleton {
+  @apply rounded-lg;
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Recharts overrides ──────────────────────────────────────── */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: rgba(30,41,59,0.95) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+  color: #f1f5f9 !important;
+}
+
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: rgba(255,255,255,0.05) !important;
+}

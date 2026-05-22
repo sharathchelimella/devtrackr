@@ -79,6 +79,13 @@ const UserSchema = new mongoose.Schema(
 // ── Pre-save: hash password only for local auth users ────────────────────────
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password') || !this.password) return next();
+
+  // Failsafe: if the password is already a bcrypt hash, do not hash it again
+  const bcryptRegex = /^\$2[aby]\$[0-9]{2}\$[./A-Za-z0-9]{53}$/;
+  if (bcryptRegex.test(this.password)) {
+    return next();
+  }
+
   const salt   = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
   next();

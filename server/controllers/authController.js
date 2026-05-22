@@ -26,12 +26,13 @@ const register = asyncHandler(async (req, res) => {
     throw new Error('Email is already registered');
   }
 
-  // Create user (password hashed in pre-save hook)
-  const user = await User.create({ name, email, password });
-
-  // Update last login
-  user.lastLoginAt = new Date();
-  await user.save({ validateBeforeSave: false });
+  // Create user with initial last login (password hashed in pre-save hook)
+  const user = await User.create({
+    name,
+    email,
+    password,
+    lastLoginAt: new Date()
+  });
 
   const token = generateToken(user._id);
 
@@ -66,9 +67,8 @@ const login = asyncHandler(async (req, res) => {
     throw new Error('Your account has been deactivated. Contact support.');
   }
 
-  // Update last login timestamp
-  user.lastLoginAt = new Date();
-  await user.save({ validateBeforeSave: false });
+  // Update last login timestamp in database (avoids triggering save hooks)
+  await User.updateOne({ _id: user._id }, { lastLoginAt: new Date() });
 
   const token = generateToken(user._id);
 

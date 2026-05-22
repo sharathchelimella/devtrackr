@@ -76,9 +76,6 @@ const UserSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ── Index for fast OAuth lookups ──────────────────────────────────────────────
-UserSchema.index({ 'github.githubId': 1 });
-
 // ── Pre-save: hash password only for local auth users ────────────────────────
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password') || !this.password) return next();

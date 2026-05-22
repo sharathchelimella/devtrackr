@@ -21,6 +21,7 @@ const authRoutes = require('./routes/auth');
 const githubRoutes = require('./routes/github');
 const aiRoutes = require('./routes/ai');
 const dashboardRoutes = require('./routes/dashboard');
+const notificationRoutes = require('./routes/notification');
 
 // ── Connect Database ─────────────────────────────────────────────────────────
 connectDB();
@@ -60,6 +61,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/github', githubRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // ── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((req, res) => {
@@ -69,10 +71,18 @@ app.use((req, res) => {
 // ── Global Error Handler (must be last) ──────────────────────────────────────
 app.use(errorHandler);
 
-// ── Start Server ─────────────────────────────────────────────────────────────
+// ── Start HTTP & WebSocket Server ────────────────────────────────────────────
+const http = require('http');
+const { initSocket } = require('./services/socketService');
+
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  console.log(`\n🚀 DevTrackr API running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+const server = http.createServer(app);
+
+// Bootstrap socket server
+initSocket(server);
+
+server.listen(PORT, () => {
+  console.log(`\n🚀 DevTrackr Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
   console.log(`   Health check: http://localhost:${PORT}/api/health\n`);
 });
 

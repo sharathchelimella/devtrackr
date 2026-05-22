@@ -165,33 +165,62 @@ const handleGitHubCallback = asyncHandler(async (req, res) => {
   );
 });
 
+const { createNotification } = require('../utils/notifications');
+
 // ── Background sync helper (non-blocking) ────────────────────────────────────
 const syncGitHubDataBackground = async (userId, accessToken, username) => {
   console.log(`🔄 Starting background sync for @${username}...`);
-
-  const repositories = await githubService.fetchRepositories(accessToken, username);
-  const commits      = await githubService.fetchAllCommits(accessToken, username, repositories);
-
-  const topRepos = repositories.slice(0, 3);
-  const [prArrays, issueArrays] = await Promise.all([
-    Promise.allSettled(topRepos.map((r) => githubService.fetchPullRequests(accessToken, username, r.name))),
-    Promise.allSettled(topRepos.map((r) => githubService.fetchIssues(accessToken, username, r.name))),
-  ]);
-
-  const pullRequests = prArrays.filter((r) => r.status === 'fulfilled').flatMap((r) => r.value);
-  const issues       = issueArrays.filter((r) => r.status === 'fulfilled').flatMap((r) => r.value);
-  const stats        = githubService.computeStats({ repositories, commits, pullRequests, issues });
-
-  await GithubData.findOneAndUpdate(
-    { user: userId },
-    { user: userId, repositories, commits, pullRequests, issues, stats, lastFetchedAt: new Date() },
-    { upsert: true, new: true, runValidators: false }
+  
+  // Dispatch 'sync:started' notification
+  await createNotification(
+    userId,
+    'sync:started',
+    'GitHub Sync Started',
+    `Importing repositories and syncing commits for @${username}...`
   );
 
-  // Update last sync time on user
-  await User.findByIdAndUpdate(userId, { 'github.lastSyncAt': new Date() });
+  try {
+    const repositories = await githubService.fetchRepositories(accessToken, username);
+    const commits      = await githubService.fetchAllCommits(accessToken, username, repositories);
 
-  console.log(`✅ Background sync complete for @${username}: ${repositories.length} repos, ${commits.length} commits`);
+    const topRepos = repositories.slice(0, 3);
+    const [prArrays, issueArrays] = await Promise.all([
+      Promise.allSettled(topRepos.map((r) => githubService.fetchPullRequests(accessToken, username, r.name))),
+      Promise.allSettled(topRepos.map((r) => githubService.fetchIssues(accessToken, username, r.name))),
+    ]);
+
+    const pullRequests = prArrays.filter((r) => r.status === 'fulfilled').flatMap((r) => r.value);
+    const issues       = issueArrays.filter((r) => r.status === 'fulfilled').flatMap((r) => r.value);
+    const stats        = githubService.computeStats({ repositories, commits, pullRequests, issues });
+
+    await GithubData.findOneAndUpdate(
+      { user: userId },
+      { user: userId, repositories, commits, pullRequests, issues, stats, lastFetchedAt: new Date() },
+      { upsert: true, new: true, runValidators: false }
+    );
+
+    // Update last sync time on user
+    await User.findByIdAndUpdate(userId, { 'github.lastSyncAt': new Date() });
+
+    // Dispatch 'sync:complete' notification
+    await createNotification(
+      userId,
+      'sync:complete',
+      'GitHub Sync Complete',
+      `Successfully synced ${repositories.length} repositories and ${commits.length} commits for @${username}!`,
+      { repoCount: repositories.length, commitCount: commits.length }
+    );
+
+    console.log(`✅ Background sync complete for @${username}: ${repositories.length} repos, ${commits.length} commits`);
+  } catch (err) {
+    console.error(`❌ Background sync failed for @${username}:`, err.message);
+    await createNotification(
+      userId,
+      'sync:failed',
+      'GitHub Sync Failed',
+      `Could not sync GitHub data for @${username}: ${err.message}`
+    );
+  }
 };
 
 // ── @desc    Get OAuth sync status

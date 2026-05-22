@@ -80,6 +80,8 @@ const disconnectGithub = asyncHandler(async (req, res) => {
   });
 });
 
+const { createNotification } = require('../utils/notifications');
+
 // ── @desc    Fetch and sync all GitHub data for the user
 // ── @route   POST /api/github/sync
 // ── @access  Private
@@ -93,53 +95,88 @@ const syncGithubData = asyncHandler(async (req, res) => {
 
   const { accessToken, username } = user.github;
 
-  // Fetch repositories
-  const repositories = await githubService.fetchRepositories(accessToken, username);
-
-  // Fetch commits across top repos
-  const commits = await githubService.fetchAllCommits(accessToken, username, repositories);
-
-  // Fetch PRs and issues from top 3 repos
-  const topRepos = repositories.slice(0, 3);
-  const prArrays = await Promise.allSettled(
-    topRepos.map((r) => githubService.fetchPullRequests(accessToken, username, r.name))
-  );
-  const issueArrays = await Promise.allSettled(
-    topRepos.map((r) => githubService.fetchIssues(accessToken, username, r.name))
+  // Dispatch 'sync:started' notification
+  await createNotification(
+    req.user._id,
+    'sync:started',
+    'GitHub Sync Started',
+    `Manual data sync triggered for @${username}.`
   );
 
-  const pullRequests = prArrays
-    .filter((r) => r.status === 'fulfilled')
-    .flatMap((r) => r.value);
+  try {
+    // Fetch repositories
+    const repositories = await githubService.fetchRepositories(accessToken, username);
 
-  const issues = issueArrays
-    .filter((r) => r.status === 'fulfilled')
-    .flatMap((r) => r.value);
+    // Fetch commits across top repos
+    const commits = await githubService.fetchAllCommits(accessToken, username, repositories);
 
-  // Compute aggregated stats
-  const stats = githubService.computeStats({ repositories, commits, pullRequests, issues });
+    // Fetch PRs and issues from top 3 repos
+    const topRepos = repositories.slice(0, 3);
+    const prArrays = await Promise.allSettled(
+      topRepos.map((r) => githubService.fetchPullRequests(accessToken, username, r.name))
+    );
+    const issueArrays = await Promise.allSettled(
+      topRepos.map((r) => githubService.fetchIssues(accessToken, username, r.name))
+    );
 
-  // Upsert GitHub data in DB
-  const githubData = await GithubData.findOneAndUpdate(
-    { user: req.user._id },
-    {
-      user: req.user._id,
-      repositories,
-      commits,
-      pullRequests,
-      issues,
+    const pullRequests = prArrays
+      .filter((r) => r.status === 'fulfilled')
+      .flatMap((r) => r.value);
+
+    const issues = issueArrays
+      .filter((r) => r.status === 'fulfilled')
+      .flatMap((r) => r.value);
+
+    // Compute aggregated stats
+    const stats = githubService.computeStats({ repositories, commits, pullRequests, issues });
+
+    // Upsert GitHub data in DB
+    const githubData = await GithubData.findOneAndUpdate(
+      { user: req.user._id },
+      {
+        user: req.user._id,
+        repositories,
+        commits,
+        pullRequests,
+        issues,
+        stats,
+        lastFetchedAt: new Date(),
+      },
+      { upsert: true, new: true, runValidators: false }
+    );
+
+    // Update last sync time on user
+    await User.findByIdAndUpdate(req.user._id, { 'github.lastSyncAt': new Date() });
+
+    // Dispatch 'sync:complete' notification
+    await createNotification(
+      req.user._id,
+      'sync:complete',
+      'GitHub Sync Complete',
+      `Manual sync succeeded! Verified ${repositories.length} repositories and ${commits.length} commits.`,
+      { repoCount: repositories.length, commitCount: commits.length }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'GitHub data synced successfully',
       stats,
-      lastFetchedAt: new Date(),
-    },
-    { upsert: true, new: true, runValidators: false }
-  );
+      lastFetchedAt: githubData.lastFetchedAt,
+    });
+  } catch (err) {
+    console.error('Manual GitHub sync failed:', err.message);
 
-  res.status(200).json({
-    success: true,
-    message: 'GitHub data synced successfully',
-    stats,
-    lastFetchedAt: githubData.lastFetchedAt,
-  });
+    // Dispatch 'sync:failed' notification
+    await createNotification(
+      req.user._id,
+      'sync:failed',
+      'GitHub Sync Failed',
+      `Manual sync failed: ${err.message}`
+    );
+
+    res.status(500);
+    throw new Error(`Sync failed: ${err.message}`);
+  }
 });
 
 // ── @desc    Get stored GitHub data (without re-fetching)

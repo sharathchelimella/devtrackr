@@ -9,67 +9,119 @@ const Report           = require('../models/Report');
 const aiService        = require('../services/aiService');
 const { getOrSet }     = require('../utils/cache');
 
+const { createNotification } = require('../utils/notifications');
+
 // ── @desc    Generate full AI developer insights
 // ── @route   POST /api/ai/analyze
 // ── @access  Private
 const analyzeProductivity = asyncHandler(async (req, res) => {
   const { reportType = 'weekly' } = req.body;
 
+  // Dispatch 'ai:started' notification
+  await createNotification(
+    req.user._id,
+    'ai:started',
+    'AI Analysis Started',
+    'Analyzing repositories, commit habits, and productivity patterns using Google Gemini...'
+  );
+
   // Check if Gemini API key is configured
   if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.startsWith('your-')) {
+    const demoAnalysis = getDemoAnalysis(req.user.name);
+    
+    // Dispatch 'ai:complete' for demo mode
+    await createNotification(
+      req.user._id,
+      'ai:complete',
+      'AI Analysis Complete (Demo Mode)',
+      `Analysis completed with productivity score of ${demoAnalysis.productivityScore}%.`
+    );
+
     return res.status(200).json({
       success: true,
       demo: true,
       message: 'AI analysis running in demo mode (Gemini API key not configured)',
-      analysis: getDemoAnalysis(req.user.name),
+      analysis: demoAnalysis,
     });
   }
 
   // Fetch stored GitHub data
   const githubData = await GithubData.findOne({ user: req.user._id });
   if (!githubData) {
+    // Dispatch 'ai:failed' notification
+    await createNotification(
+      req.user._id,
+      'ai:failed',
+      'AI Analysis Failed',
+      'No GitHub data found. Please connect and sync your GitHub account first.'
+    );
+
     res.status(400);
     throw new Error('No GitHub data found. Please connect and sync your GitHub account first.');
   }
 
   const cacheKey = `ai_v2:${req.user._id}:${reportType}`;
 
-  const analysis = await getOrSet(
-    cacheKey,
-    async () => {
-      return aiService.analyzeProductivity({
-        commits:      githubData.commits      || [],
-        pullRequests: githubData.pullRequests || [],
-        issues:       githubData.issues       || [],
-        repositories: githubData.repositories || [],
-        username:     req.user.github?.username || req.user.name,
-        dateRange:    'Last 30 days',
-      });
-    },
-    1800 // Cache for 30 minutes
-  );
+  try {
+    const analysis = await getOrSet(
+      cacheKey,
+      async () => {
+        return aiService.analyzeProductivity({
+          commits:      githubData.commits      || [],
+          pullRequests: githubData.pullRequests || [],
+          issues:       githubData.issues       || [],
+          repositories: githubData.repositories || [],
+          username:     req.user.github?.username || req.user.name,
+          dateRange:    'Last 30 days',
+        });
+      },
+      1800 // Cache for 30 minutes
+    );
 
-  // Persist report to DB
-  const report = await Report.create({
-    user:          req.user._id,
-    reportType,
-    summary:       analysis.summary,
-    productivityScore: analysis.productivityScore,
-    recommendations:   analysis.recommendations || [],
-    bottlenecks:       analysis.bottlenecks     || [],
-    inactiveContributors: analysis.inactiveAreas || [],
-    commitCount:  githubData.commits?.length      || 0,
-    prCount:      githubData.pullRequests?.length  || 0,
-    issueCount:   githubData.issues?.length        || 0,
-    aiModel:      analysis.aiModel,
-    tokensUsed:   analysis.tokensUsed,
-    dateRange: {
-      from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-      to:   new Date(),
-    },
-  });
+    // Persist report to DB
+    const report = await Report.create({
+      user:          req.user._id,
+      reportType,
+      summary:       analysis.summary,
+      productivityScore: analysis.productivityScore,
+      recommendations:   analysis.recommendations || [],
+      bottlenecks:       analysis.bottlenecks     || [],
+      inactiveContributors: analysis.inactiveAreas || [],
+      commitCount:  githubData.commits?.length      || 0,
+      prCount:      githubData.pullRequests?.length  || 0,
+      issueCount:   githubData.issues?.length        || 0,
+      aiModel:      analysis.aiModel,
+      tokensUsed:   analysis.tokensUsed,
+      dateRange: {
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        to:   new Date(),
+      },
+    });
 
-  res.status(200).json({ success: true, analysis, reportId: report._id });
+    // Dispatch 'ai:complete' notification
+    await createNotification(
+      req.user._id,
+      'ai:complete',
+      'AI Analysis Complete',
+      `Analysis finished! Productivity score: ${analysis.productivityScore}%.`,
+      { reportId: report._id, productivityScore: analysis.productivityScore }
+    );
+
+    res.status(200).json({ success: true, analysis, reportId: report._id });
+  } catch (err) {
+    console.error('AI analysis failed:', err.message);
+
+    // Dispatch 'ai:failed' notification
+    await createNotification(
+      req.user._id,
+      'ai:failed',
+      'AI Analysis Failed',
+      `AI analysis failed: ${err.message}`
+    );
+
+    res.status(500);
+    throw new Error(`AI Analysis failed: ${err.message}`);
+  }
 });
 
 // ── @desc    Sprint summary (fast, lightweight call)

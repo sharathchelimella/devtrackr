@@ -1,5 +1,5 @@
 /**
- * config/db.js – MongoDB Connection via Mongoose
+ * config/db.js – MongoDB Atlas Connection via Mongoose
  */
 
 const mongoose = require('mongoose');
@@ -7,19 +7,29 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI, {
-      // Modern Mongoose doesn't need useNewUrlParser etc, kept for clarity
+      serverSelectionTimeoutMS: 5000,  // Fail fast if Atlas is unreachable
+      socketTimeoutMS: 45000,          // Keep connection alive longer
     });
 
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    console.log(`✅ MongoDB Atlas Connected: ${conn.connection.host}`);
+    console.log(`   Database: ${conn.connection.name}`);
 
-    // Log when connection is lost
+    // Handle connection events
     mongoose.connection.on('disconnected', () => {
-      console.warn('⚠️  MongoDB disconnected');
+      console.warn('⚠️  MongoDB disconnected – retrying...');
     });
+
+    mongoose.connection.on('error', (err) => {
+      console.error(`❌ MongoDB error: ${err.message}`);
+    });
+
   } catch (error) {
-    console.error(`❌ MongoDB connection error: ${error.message}`);
-    process.exit(1); // Fail fast if DB is unavailable
+    console.error(`\n❌ MongoDB Atlas connection FAILED`);
+    console.error(`   Error: ${error.message}`);
+    console.error(`   Check your MONGO_URI in .env file\n`);
+    process.exit(1);
   }
 };
 
 module.exports = connectDB;
+

@@ -68,7 +68,7 @@ const AIInsights = () => {
           </div>
           <div>
             <h2 className="text-lg font-bold text-white">AI Productivity Analysis</h2>
-            <p className="text-sm text-slate-400">Powered by GPT-4o-mini · Analyzes your GitHub data</p>
+            <p className="text-sm text-slate-400">Powered by Gemini 1.5 Flash · Analyzes your GitHub data</p>
           </div>
         </div>
         <div className="flex gap-3">

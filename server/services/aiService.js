@@ -1,26 +1,41 @@
 /**
  * services/aiService.js – AI Productivity Analysis Service
- * Sends GitHub data to OpenAI and returns productivity insights.
+ * Uses Google Gemini API to analyze GitHub data and return productivity insights.
  */
 
-const OpenAI = require('openai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-let openaiClient = null;
+let geminiClient = null;
 
 /**
- * Lazily initialize the OpenAI client (only when first needed).
+ * Lazily initialize the Gemini client (only when first needed).
  */
-const getOpenAIClient = () => {
-  if (!openaiClient) {
-    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const getGeminiClient = () => {
+  if (!geminiClient) {
+    geminiClient = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   }
-  return openaiClient;
+  return geminiClient;
+};
+
+/**
+ * Get the Gemini generative model instance.
+ * Using gemini-1.5-flash – fast, cost-effective, supports JSON output.
+ */
+const getModel = () => {
+  return getGeminiClient().getGenerativeModel({
+    model: 'gemini-1.5-flash',
+    generationConfig: {
+      temperature: 0.3,       // Low temp for consistent, factual output
+      maxOutputTokens: 1500,
+      responseMimeType: 'application/json', // Force JSON output from Gemini
+    },
+  });
 };
 
 /**
  * Build a structured prompt for productivity analysis.
  * @param {Object} params
- * @returns {string} System + user prompt
+ * @returns {string} Full prompt string
  */
 const buildAnalysisPrompt = ({ commits, pullRequests, issues, username, dateRange }) => {
   const commitSummary = commits
@@ -51,7 +66,7 @@ ${prSummary}
 ISSUES:
 ${issueSummary}
 
-Please respond with a valid JSON object with EXACTLY this structure:
+Respond ONLY with a valid JSON object with EXACTLY this structure (no markdown, no extra text):
 {
   "summary": "2-3 sentence summary of overall productivity and key achievements",
   "productivityScore": <number 0-100 based on commit frequency, PR activity, issue resolution>,
@@ -72,70 +87,59 @@ Please respond with a valid JSON object with EXACTLY this structure:
 };
 
 /**
- * Generate AI productivity analysis from GitHub data.
- * @param {Object} githubData - { commits, pullRequests, issues, username }
- * @returns {Promise<Object>} AI analysis result
+ * Generate AI productivity analysis from GitHub data using Gemini.
+ * @param {Object} params - { commits, pullRequests, issues, username, dateRange }
+ * @returns {Promise<Object>} Parsed AI analysis result
  */
 const analyzeProductivity = async ({ commits, pullRequests, issues, username, dateRange }) => {
-  const client = getOpenAIClient();
+  const model = getModel();
   const prompt = buildAnalysisPrompt({ commits, pullRequests, issues, username, dateRange });
 
-  const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      {
-        role: 'system',
-        content:
-          'You are a developer productivity analyst. Always respond with valid JSON only, no markdown, no explanations outside the JSON.',
-      },
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-    temperature: 0.3, // Lower temperature for more consistent, factual output
-    max_tokens: 1000,
-    response_format: { type: 'json_object' },
-  });
+  const result = await model.generateContent(prompt);
+  const responseText = result.response.text();
 
-  const rawContent = response.choices[0].message.content;
-  const analysis = JSON.parse(rawContent);
+  // Parse the JSON response from Gemini
+  let analysis;
+  try {
+    analysis = JSON.parse(responseText);
+  } catch {
+    // Gemini sometimes wraps in markdown – strip it as fallback
+    const cleaned = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    analysis = JSON.parse(cleaned);
+  }
 
   return {
     ...analysis,
-    tokensUsed: response.usage?.total_tokens,
-    aiModel: response.model,
+    tokensUsed: result.response.usageMetadata?.totalTokenCount || null,
+    aiModel: 'gemini-1.5-flash',
     generatedAt: new Date().toISOString(),
   };
 };
 
 /**
- * Generate a brief sprint summary (lighter prompt, cheaper).
+ * Generate a brief sprint summary using Gemini Flash (fast & cheap).
  * @param {Array} commits
  * @param {string} username
  * @returns {Promise<string>} Sprint summary text
  */
 const generateSprintSummary = async (commits, username) => {
-  const client = getOpenAIClient();
+  const model = getGeminiClient().getGenerativeModel({
+    model: 'gemini-1.5-flash',
+    generationConfig: {
+      temperature: 0.4,
+      maxOutputTokens: 400,
+    },
+  });
 
   const messages = commits
     .slice(0, 20)
     .map((c) => `- ${c.message}`)
     .join('\n');
 
-  const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      {
-        role: 'user',
-        content: `Summarize the following sprint commits for developer ${username} in 3-4 bullet points. Be concise and technical:\n${messages}`,
-      },
-    ],
-    temperature: 0.4,
-    max_tokens: 300,
-  });
+  const prompt = `Summarize the following sprint commits for developer "${username}" in 3-4 concise bullet points. Be technical and specific:\n\n${messages}`;
 
-  return response.choices[0].message.content;
+  const result = await model.generateContent(prompt);
+  return result.response.text();
 };
 
 module.exports = { analyzeProductivity, generateSprintSummary };

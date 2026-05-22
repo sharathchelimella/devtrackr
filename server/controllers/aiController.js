@@ -14,12 +14,12 @@ const { getOrSet } = require('../utils/cache');
 const analyzeProductivity = asyncHandler(async (req, res) => {
   const { reportType = 'weekly' } = req.body;
 
-  // Check if OpenAI key is configured
-  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.startsWith('sk-your')) {
+  // Check if Gemini API key is configured
+  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.startsWith('your-')) {
     return res.status(200).json({
       success: true,
       demo: true,
-      message: 'AI analysis running in demo mode (OpenAI key not configured)',
+      message: 'AI analysis running in demo mode (Gemini API key not configured)',
       analysis: getDemoAnalysis(req.user.name),
     });
   }
@@ -79,7 +79,7 @@ const analyzeProductivity = asyncHandler(async (req, res) => {
 // ── @route   GET /api/ai/sprint-summary
 // ── @access  Private
 const getSprintSummary = asyncHandler(async (req, res) => {
-  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.startsWith('sk-your')) {
+  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.startsWith('your-')) {
     return res.status(200).json({
       success: true,
       demo: true,
@@ -144,7 +144,7 @@ const getReport = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, report });
 });
 
-// ── Demo analysis for when no OpenAI key is configured ────────────────────
+// ── Demo analysis for when no Gemini API key is configured ─────────────────
 const getDemoAnalysis = (name) => ({
   summary: `${name} has shown consistent productivity over the past 30 days with strong commit frequency and active PR engagement. Code quality indicators are positive with regular merges and issue resolution.`,
   productivityScore: 78,
@@ -176,7 +176,7 @@ const getDemoAnalysis = (name) => ({
   bottlenecks: ['Long PR review cycles', 'Issue backlog growing week over week'],
   inactiveAreas: ['Documentation updates', 'Test coverage improvements'],
   weeklyTrend: 'improving',
-  aiModel: 'demo-mode',
+  aiModel: 'gemini-demo',
   generatedAt: new Date().toISOString(),
 });
 

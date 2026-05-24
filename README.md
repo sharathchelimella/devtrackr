@@ -88,14 +88,10 @@ Connect your GitHub account via a Personal Access Token (PAT), and DevTrackr wil
 [![DevTrackr Demo](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
 
 ---
-
 ## 📸 Screenshots
 
-> _Add real screenshots by uploading images to a `/docs/screenshots/` folder in this repo and referencing them below._
-
 ### Dashboard
-![Dashboard](<img width="1916" height="927" alt="{49251CE3-3F5E-4E3C-9C71-9EFADDC99CC5}" src="C:\Users\hp\Pictures\Screenshots\Screenshot (109).png" />
-)
+![Dashboard](./docs/screenshots/dashboard.png)
 _Metrics overview, commit frequency chart, recent activity feed_
 
 ### Repositories
@@ -113,11 +109,6 @@ _Open / Merged / Closed filter tabs_
 ### AI Insights
 ![AI Insights](./docs/screenshots/ai-insights.png)
 _Productivity score, recommendations, bottleneck detection_
-
-### Settings (Dark Mode)
-![Settings](./docs/screenshots/settings-dark.png)
-_Profile management, GitHub connect, theme toggle_
-
 ---
 
 ## ✨ Features

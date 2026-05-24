@@ -11,5 +11,23 @@ export default defineConfig({
         secure: false
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            // Split big libraries into separate chunks for optimization
+            if (id.includes("recharts") || id.includes("d3") || id.includes("react-resize-detector")) {
+              return "recharts-vendor";
+            }
+            if (id.includes("lucide-react")) {
+              return "lucide-vendor";
+            }
+            return "vendor";
+          }
+        }
+      }
+    }
   }
 });

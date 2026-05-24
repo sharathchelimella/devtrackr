@@ -94,7 +94,7 @@ Connect your GitHub account via a Personal Access Token (PAT), and DevTrackr wil
 > _Add real screenshots by uploading images to a `/docs/screenshots/` folder in this repo and referencing them below._
 
 ### Dashboard
-![Dashboard](<img width="1916" height="927" alt="{49251CE3-3F5E-4E3C-9C71-9EFADDC99CC5}" src="https://github.com/user-attachments/assets/2b507877-02d7-4a2d-94ec-5153dc3202f3" />
+![Dashboard](<img width="1916" height="927" alt="{49251CE3-3F5E-4E3C-9C71-9EFADDC99CC5}" src="C:\Users\hp\Pictures\Screenshots\Screenshot (109).png" />
 )
 _Metrics overview, commit frequency chart, recent activity feed_
 

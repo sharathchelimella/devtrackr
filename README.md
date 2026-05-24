@@ -83,11 +83,10 @@ Connect your GitHub account via a Personal Access Token (PAT), and DevTrackr wil
 
 ## 🎬 Demo Video
 
-> _Record a Loom/YouTube walkthrough and paste the embed link below._
+[Click to Watch Demo](https://github.com/sharathchelimella/devtrackr/raw/main/DevTrackr%20%E2%80%93%20AI%20Developer%20Productivity%20Dashboard%20-%20Google%20Chrome%202026-05-24%2013-19-35.mp4)
 
-[![DevTrackr Demo](https://drive.google.com/file/d/1pTSZrS5JTH0bmugrEcQAG7Iv4mPDBmDQ/view?usp=sharing)
+----
 
----
 ## 📸 Screenshots
 
 ### Dashboard

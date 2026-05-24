@@ -85,7 +85,7 @@ Connect your GitHub account via a Personal Access Token (PAT), and DevTrackr wil
 
 > _Record a Loom/YouTube walkthrough and paste the embed link below._
 
-[![DevTrackr Demo](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
+[![DevTrackr Demo](https://drive.google.com/file/d/1pTSZrS5JTH0bmugrEcQAG7Iv4mPDBmDQ/view?usp=sharing)
 
 ---
 ## 📸 Screenshots
